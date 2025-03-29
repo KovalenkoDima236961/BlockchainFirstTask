@@ -93,23 +93,16 @@ func (blockChain *Blockchain) GetTransactionPool() *TransactionPool {
 func (blockChain *Blockchain) BlockAdd(block *Block) bool {
 	parentHash := block.GetPrevBlockHash()
 	if parentHash == nil || len(parentHash) == 0 {
-		println("PARENT HASH EMPTY")
 		return false
 	}
 	parentBlock := blockChain.Get(parentHash)
 	if parentBlock == nil {
-		println("PARENT BLOCK EMPTY")
 		return false
 	}
 
 	newHeight := int(parentBlock.Height + 1)
 	maxValidHeight := int(blockChain.MaxHeightNode[0].Height) - CUT_OFF_AGE
-	println("", blockChain.MaxHeightNode[0].Height)
-	println("New height:", newHeight)
-	println("Limit: ", maxValidHeight)
 	if newHeight <= maxValidHeight {
-		println("ValidHe:", maxValidHeight)
-		println("New height:", newHeight)
 		return false
 	}
 
@@ -120,7 +113,6 @@ func (blockChain *Blockchain) BlockAdd(block *Block) bool {
 	validTxs := Handler(blockTxs)
 
 	if len(validTxs) != len(blockTxs) {
-		println("Len valid txs")
 		return false
 	}
 
@@ -128,7 +120,6 @@ func (blockChain *Blockchain) BlockAdd(block *Block) bool {
 
 	coinbaseTransaction := block.GetCoinbase()
 	if coinbaseTransaction == nil || !CheckCoinbaseTransaction(coinbaseTransaction) {
-		println("Coinbase transaction fail")
 		return false
 	}
 
@@ -144,8 +135,14 @@ func (blockChain *Blockchain) BlockAdd(block *Block) bool {
 	blockChain.LatestBlocks = append(blockChain.LatestBlocks, blochHash)
 
 	if newNode.Height > blockChain.MaxHeightNode[0].Height {
-		blockChain.MaxHeightNode = blockChain.MaxHeightNode[:0]
-		blockChain.MaxHeightNode = append(blockChain.MaxHeightNode, newNode)
+		oldMax := blockChain.MaxHeightNode[0]
+		blockChain.MaxHeightNode = []*BlockNode{newNode}
+
+		for _, child := range oldMax.Children {
+			if child != newNode {
+				RemoveFork(child, blockChain)
+			}
+		}
 	} else if newNode.Height == blockChain.MaxHeightNode[0].Height {
 		blockChain.MaxHeightNode = append(blockChain.MaxHeightNode, newNode)
 	}
@@ -159,7 +156,6 @@ func (blockChain *Blockchain) BlockAdd(block *Block) bool {
 	for _, transaction := range blockTxs {
 		blockChain.GlobalTransactionPool.RemoveTransaction(transaction.Hash)
 	}
-	println("RETURN TRUE BLOCK ADD")
 	return true
 }
 
