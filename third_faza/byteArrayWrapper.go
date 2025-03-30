@@ -46,8 +46,8 @@ func (wrapper *ByteArrayWrapper) Equals(other *ByteArrayWrapper) bool {
 
 // HashCode function
 func (wrapper *ByteArrayWrapper) HashCode() uint32 {
-	hasher := fnv.New32a()
-	_, err := hasher.Write(wrapper.contents)
+	hasher := fnv.New32a()                   // What is it
+	_, err := hasher.Write(wrapper.contents) // what is it
 	if err != nil {
 		return 0
 	}

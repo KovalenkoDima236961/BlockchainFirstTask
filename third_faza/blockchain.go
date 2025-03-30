@@ -135,14 +135,7 @@ func (blockChain *Blockchain) BlockAdd(block *Block) bool {
 	blockChain.LatestBlocks = append(blockChain.LatestBlocks, blochHash)
 
 	if newNode.Height > blockChain.MaxHeightNode[0].Height {
-		oldMax := blockChain.MaxHeightNode[0]
 		blockChain.MaxHeightNode = []*BlockNode{newNode}
-
-		for _, child := range oldMax.Children {
-			if child != newNode {
-				RemoveFork(child, blockChain)
-			}
-		}
 	} else if newNode.Height == blockChain.MaxHeightNode[0].Height {
 		blockChain.MaxHeightNode = append(blockChain.MaxHeightNode, newNode)
 	}
@@ -157,25 +150,6 @@ func (blockChain *Blockchain) BlockAdd(block *Block) bool {
 		blockChain.GlobalTransactionPool.RemoveTransaction(transaction.Hash)
 	}
 	return true
-}
-
-func RemoveFork(forkBlock *BlockNode, blockChain *Blockchain) {
-	if forkBlock == nil {
-		return
-	}
-
-	for _, child := range forkBlock.Children {
-		RemoveFork(child, blockChain)
-	}
-
-	for _, tx := range forkBlock.B.GetTransactions() {
-		for i := range tx.Outputs {
-			utxo := UTXO{tx.GetHash(), i}
-			forkBlock.Pool.RemoveUTXO(utxo)
-		}
-	}
-
-	delete(blockChain.BlockChain, keyFoBlock(forkBlock.B.GetHash()))
 }
 
 func CheckCoinbaseTransaction(tx *Transaction) bool {

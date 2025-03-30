@@ -4,10 +4,10 @@ import (
 	"math/rand"
 )
 
-const (
-	k     = 12
-	alpha = 5
-	beta  = 10
+var (
+	k     int
+	alpha int
+	beta  int
 )
 
 type Node interface {
@@ -64,6 +64,10 @@ const (
 type TypeOfStatus int
 
 func CreateTrustedNode(p_graph float64, p_byzantine float64, p_txDistribution float64, numRounds int) Node {
+	k = int((p_graph / 0.2) * 12 * (float64(numRounds) / 10.0))
+	alpha = int(0.58 * float64(k) * (0.30 / p_byzantine))
+	beta = int((p_txDistribution / 0.05) * 4 * (float64(numRounds) / 10.0))
+
 	return &TrustedNode{
 		followers:         make([]bool, 0),
 		localTransactions: make([]*Transaction, 0),
@@ -90,16 +94,12 @@ func (node *TrustedNode) FollowersSend() []*Transaction {
 func (node *TrustedNode) FollowesReceive(candidates [][]int) {
 	candidateList := make([]*Candidate, 0, len(candidates))
 	for _, data := range candidates {
-		if len(data) < 2 {
-			continue
-		}
 		candidateList = append(candidateList, NewCandidate(NewTransaction(data[0]), data[1]))
 	}
 
 	votesByTx := make(map[int][]int)
 	for _, candidate := range candidateList {
-		// Only consider votes from nodes that are followed.
-		if candidate.sender < len(node.followers) && node.followers[candidate.sender] {
+		if node.followers[candidate.sender] {
 			txID := candidate.tx.HashCode()
 			votesByTx[txID] = append(votesByTx[txID], candidate.sender)
 		}

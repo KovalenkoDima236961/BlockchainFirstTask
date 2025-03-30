@@ -14,7 +14,6 @@ type UTXO struct {
 
 // NewUTXO creates a new UTXO instance with a copy of the given transaction hash and the specified index.
 func NewUTXO(txHash []byte, index int) *UTXO {
-	// Copy the transaction hash to avoid external modifications.
 	return &UTXO{
 		txHash: append([]byte{}, txHash...),
 		index:  index,

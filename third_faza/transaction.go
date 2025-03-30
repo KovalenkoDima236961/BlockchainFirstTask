@@ -40,11 +40,11 @@ func (in *Input) AddMultiSignature(sig []byte) {
 	in.MultiSigSignature = append(in.MultiSigSignature, sig)
 }
 
+// I should add also here check multisig
 func (in *Input) Equals(other *Input) bool {
 	if other == nil {
 		return false
 	}
-
 	if len(in.PrevTxHash) != len(other.PrevTxHash) {
 		return false
 	}
@@ -53,7 +53,6 @@ func (in *Input) Equals(other *Input) bool {
 			return false
 		}
 	}
-
 	if in.OutputIndex != other.OutputIndex {
 		return false
 	}

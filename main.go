@@ -9,6 +9,7 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	"image/color"
@@ -33,16 +34,30 @@ var (
 	mainWindow fyne.Window
 
 	shortTxHashToLongTxHash map[string]string
+
+	userCounter = 4
 )
+
+func createNewUserPopup(w fyne.Window) {
+	priv, _ := rsa.GenerateKey(rand.Reader, 1024)
+	pub := &priv.PublicKey
+
+	newUser := KeyPair{
+		Name:       fmt.Sprintf("User%d", userCounter),
+		PrivateKey: priv,
+		PublicKey:  pub,
+	}
+
+	keyPairs = append(keyPairs, newUser)
+	userCounter++
+
+	dialog.ShowInformation("✅ Success", fmt.Sprintf("Created new user: %s", newUser.Name), w)
+}
 
 // ===================== STYLED BLOCKS / TREE VIEW =====================
 
-func styledBlockCard(height int, hash string, prevHash string, txCount int) fyne.CanvasObject {
-	// Background
-	bg := canvas.NewRectangle(color.NRGBA{R: 60, G: 60, B: 100, A: 255})
-	bg.SetMinSize(fyne.NewSize(200, 180))
-
-	// White text
+func styledBlockCard(height int, hash string, prevHash string, txCount int, bgColor color.Color) fyne.CanvasObject {
+	// Create text content
 	heightText := canvas.NewText(fmt.Sprintf("Height: %d", height), color.White)
 	heightText.Alignment = fyne.TextAlignCenter
 	heightText.TextStyle.Bold = true
@@ -65,51 +80,81 @@ func styledBlockCard(height int, hash string, prevHash string, txCount int) fyne
 		layout.NewSpacer(),
 	)
 
-	return container.NewMax(bg, content)
+	// Wrap content in a fixed size container
+	card := container.NewMax()
+	card.Resize(fyne.NewSize(200, 180)) // This ensures size
+
+	bg := canvas.NewRectangle(bgColor)
+	bg.Resize(fyne.NewSize(200, 180)) // Ensure background fits
+
+	card.Add(bg)
+	card.Add(content)
+
+	return card
 }
 
-func buildTree(node *third_faza.BlockNode) *fyne.Container {
-	block := node.B
-	card := styledBlockCard(int(node.Height), fmt.Sprintf("%x", block.GetHash()), fmt.Sprintf("%x", block.GetPrevBlockHash()), len(block.GetTransactions()))
-
-	childContainers := []fyne.CanvasObject{}
-	for _, child := range node.Children {
-		childContainers = append(childContainers, buildTree(child))
-	}
-
-	switch len(childContainers) {
+func getBlockColor(height int) color.Color {
+	switch height % 5 {
 	case 0:
-		// No children => Just center the card
-		return container.NewVBox(
-			container.NewCenter(card),
-		)
-
+		return color.NRGBA{R: 60, G: 60, B: 100, A: 255}
 	case 1:
-		// Exactly one child => center the parent and the single child
-		return container.NewVBox(
-			container.NewCenter(card),
-			container.NewCenter(childContainers[0]),
-		)
-
+		return color.NRGBA{R: 80, G: 40, B: 120, A: 255}
+	case 2:
+		return color.NRGBA{R: 40, G: 90, B: 140, A: 255}
+	case 3:
+		return color.NRGBA{R: 100, G: 60, B: 100, A: 255}
 	default:
-		// Multiple children => place them in an HBox with spacing
-		row := container.NewHBox()
-		for i, c := range childContainers {
-			if i > 0 {
-				// Add a spacer between children to create visible separation
-				row.Add(layout.NewSpacer())
-			}
-			row.Add(c)
-		}
-
-		// Center the row of children
-		centeredChildren := container.NewCenter(row)
-
-		return container.NewVBox(
-			container.NewCenter(card),
-			centeredChildren,
-		)
+		return color.NRGBA{R: 70, G: 70, B: 110, A: 255}
 	}
+}
+
+func buildTreeViewTree(node *third_faza.BlockNode, x, y float64) []fyne.CanvasObject {
+	objects := []fyne.CanvasObject{}
+
+	// 1. Create the block card
+	card := styledBlockCard(int(node.Height), fmt.Sprintf("%x", node.B.GetHash()), fmt.Sprintf("%x", node.B.GetPrevBlockHash()), len(node.B.GetTransactions()), getBlockColor(int(node.Height)))
+	card.Move(fyne.NewPos(float32(x), float32(y)))
+	objects = append(objects, card)
+
+	childCount := len(node.Children)
+	spacing := 250.0
+	startX := x - spacing*float64(childCount-1)/2
+
+	for i, child := range node.Children {
+		childX := startX + spacing*float64(i)
+		childY := y + 200
+
+		// Draw connection line
+		line := canvas.NewLine(color.Black)
+		line.StrokeWidth = 2
+		line.Position1 = fyne.NewPos(float32(x+100), float32(y+180))       // bottom-center of parent card
+		line.Position2 = fyne.NewPos(float32(childX+100), float32(childY)) // top-center of child card
+		objects = append(objects, line)                                    // Add line BEFORE child card
+
+		// Recursively add child elements
+		childObjs := buildTreeViewTree(child, childX, childY)
+		objects = append(objects, childObjs...)
+	}
+
+	return objects
+}
+
+func calculateCanvasSize(objects []fyne.CanvasObject) fyne.Size {
+	var maxX, maxY float32
+	for _, obj := range objects {
+		pos := obj.Position()
+		size := obj.MinSize()
+		right := pos.X + size.Width
+		bottom := pos.Y + size.Height
+
+		if right > maxX {
+			maxX = right
+		}
+		if bottom > maxY {
+			maxY = bottom
+		}
+	}
+	return fyne.NewSize(maxX+50, maxY+50) // padding
 }
 
 func buildBlockchainTreeView() fyne.CanvasObject {
@@ -118,9 +163,23 @@ func buildBlockchainTreeView() fyne.CanvasObject {
 		return widget.NewLabel("❌ Genesis block not found")
 	}
 
-	tree := buildTree(root)
-	scroll := container.NewScroll(tree)
-	scroll.SetMinSize(fyne.NewSize(800, 600)) // big enough for large blocks
+	treeObjects := buildTreeViewTree(root, 400, 20)
+
+	content := container.NewWithoutLayout()
+	for _, obj := range treeObjects {
+		content.Add(obj)
+	}
+
+	// 👇 Dynamically calculate the height and add a transparent rectangle to "push" scrollable space
+	canvasSize := calculateCanvasSize(treeObjects)
+	spacer := canvas.NewRectangle(color.Transparent)
+	spacer.SetMinSize(canvasSize)
+	content.Add(spacer)
+
+	// ✅ Now content will be scrollable
+	scroll := container.NewScroll(content)
+	scroll.SetMinSize(fyne.NewSize(1000, 600)) // Viewport size
+
 	return scroll
 }
 
@@ -516,16 +575,18 @@ func main() {
 	var updateBlockchainScreen func()
 	blockchainScreen := container.NewVBox()
 	updateBlockchainScreen = func() {
-		blockchainTree := buildBlockchainTreeView()
+		blockchainDiagram := buildBlockchainTreeView()
 		refreshButton := widget.NewButton("🔄 Refresh View", func() {
 			updateBlockchainScreen()
 		})
 
 		blockchainScreen.Objects = []fyne.CanvasObject{
-			widget.NewLabelWithStyle("🔗 Blockchain Chain View", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-			blockchainTree,
-			layout.NewSpacer(),
-			container.NewCenter(refreshButton),
+			container.NewBorder(
+				widget.NewLabelWithStyle("🔗 Blockchain Chain View", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+				container.NewCenter(refreshButton),
+				nil, nil,
+				blockchainDiagram,
+			),
 		}
 		blockchainScreen.Refresh()
 	}
@@ -555,11 +616,16 @@ func main() {
 		mainContent.Refresh()
 	})
 
+	createUserBtn := widget.NewButton("➕ Create New User", func() {
+		createNewUserPopup(mainWindow)
+	})
+
 	homeScreen := container.NewVBox(
 		homeTitle,
 		homeDesc,
 		asciiBlock,
 		getStartedBtn,
+		createUserBtn,
 	)
 
 	// Main content + sidebar

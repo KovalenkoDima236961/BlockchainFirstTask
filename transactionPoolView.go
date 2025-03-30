@@ -24,7 +24,7 @@ func showTxDialog(tx *third_faza.Transaction, parent fyne.Window) {
 			if len(hash) > 6 {
 				hash = hash[:6]
 			}
-			inputsContainer.Add(widget.NewLabel(fmt.Sprintf("Input %d: Hash: %s, Index: %d", i, hash, input.OutputIndex)))
+			inputsContainer.Add(widget.NewLabel(fmt.Sprintf("Input %d: Hash: %s, Index: %d", i, hash[:6], input.OutputIndex)))
 		}
 	}
 
@@ -39,7 +39,7 @@ func showTxDialog(tx *third_faza.Transaction, parent fyne.Window) {
 			if len(addr) > 6 {
 				addr = addr[:6]
 			}
-			outputsContainer.Add(widget.NewLabel(fmt.Sprintf("Output %d: Value: %.2f, Address: %s", i, output.Value, addr)))
+			outputsContainer.Add(widget.NewLabel(fmt.Sprintf("Output %d: Value: %.2f", i, output.Value)))
 		}
 	}
 
