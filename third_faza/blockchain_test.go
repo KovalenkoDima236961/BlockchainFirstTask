@@ -1680,3 +1680,98 @@ func TestBlockchain_FullMultiSigTransactions(t *testing.T) {
 	result = BlockProcess(block3)
 	assert.True(t, result, "Block with multisig transaction having two signatures should be accepted")
 }
+
+func TestBlockchain_CreateMultisigWithInvalidTransaction(t *testing.T) {
+	privateKey1, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		log.Fatal(err)
+	}
+	pubKey1 := &privateKey1.PublicKey
+
+	privateKey2, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		log.Fatal(err)
+	}
+	pubKey2 := &privateKey2.PublicKey
+
+	privateKey3, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		log.Fatal(err)
+	}
+	pubKey3 := &privateKey3.PublicKey
+
+	// Genesis block
+	genesisBlock := NewBlock(nil, pubKey2)
+	genesisBlock.Finalizee()
+
+	localBlockchain := NewBlockchain(genesisBlock)
+	HandleBlocks(localBlockchain)
+
+	block1 := NewBlock(genesisBlock.GetHash(), pubKey1)
+	tx1 := NewTransaction()
+	tx1.AddInput(genesisBlock.GetCoinbase().GetHash(), 0)
+	addresses := []*rsa.PublicKey{pubKey1, pubKey2, pubKey3}
+	multiSigOut := NewMultiSigOutput(3.0, addresses)
+	tx1.AddMultisigOutput(multiSigOut)
+	tx1.Finalize()
+
+	tx1.SignTx(privateKey2, 0) // Only signing with one user
+
+	block1.TransactionAdd(tx1)
+	block1.Finalizee()
+
+	result := BlockProcess(block1)
+
+	assert.True(t, result, "Block with multisig output transaction should be accepted")
+
+	tx2 := NewTransaction()
+	tx2.AddInput(tx1.GetHash(), 0)
+	tx2.AddOutput(2.0, pubKey1)
+	tx2.SignMultiSigTx(privateKey1, 0) // Signing with only one user
+	tx2.Finalize()
+
+	block2 := NewBlock(block1.GetHash(), pubKey2)
+	block2.TransactionAdd(tx2)
+	block2.Finalizee()
+	result = BlockProcess(block2)
+	assert.False(t, result, "Block with multisig transaction having only one signature should be rejected")
+
+	invalidTx := NewTransaction()
+	invalidTx.AddInput([]byte("invalidTxHash"), 0) // Invalid previous transaction hash
+	invalidTx.AddOutput(1.0, pubKey2)
+	invalidTx.SignMultiSigTx(privateKey2, 0)
+	invalidTx.Finalize()
+
+	block3 := NewBlock(block2.GetHash(), pubKey1)
+	block3.TransactionAdd(invalidTx)
+	block3.Finalizee()
+	result = BlockProcess(block3)
+	assert.False(t, result, "Block with invalid transaction input should be rejected")
+
+	// Attempt to create a valid multisig transaction with the minimum number of signatures
+	tx3 := NewTransaction()
+	tx3.AddInput(tx1.GetHash(), 0)
+	tx3.AddOutput(2.0, pubKey1)
+	tx3.SignMultiSigTx(privateKey1, 0)
+	tx3.SignMultiSigTx(privateKey2, 0)
+	tx3.Finalize()
+
+	block4 := NewBlock(block1.GetHash(), pubKey1)
+	block4.TransactionAdd(tx3)
+	block4.Finalizee()
+	result = BlockProcess(block4)
+	assert.True(t, result, "Block with valid multisig transaction having two signatures should be accepted")
+
+	// Test multi-signature input with the wrong number of signatures
+	tx4 := NewTransaction()
+	tx4.AddInput(tx1.GetHash(), 0)
+	tx4.AddOutput(2.0, pubKey1)
+	tx4.SignMultiSigTx(privateKey1, 0) // Missing a signature
+	tx4.Finalize()
+
+	block5 := NewBlock(block4.GetHash(), pubKey2)
+	block5.TransactionAdd(tx4)
+	block5.Finalizee()
+	result = BlockProcess(block5)
+	assert.False(t, result, "Block with multisig transaction and missing signature should be rejected")
+}

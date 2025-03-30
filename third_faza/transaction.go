@@ -40,7 +40,6 @@ func (in *Input) AddMultiSignature(sig []byte) {
 	in.MultiSigSignature = append(in.MultiSigSignature, sig)
 }
 
-// I should add also here check multisig
 func (in *Input) Equals(other *Input) bool {
 	if other == nil {
 		return false
@@ -56,19 +55,36 @@ func (in *Input) Equals(other *Input) bool {
 	if in.OutputIndex != other.OutputIndex {
 		return false
 	}
+
 	if len(in.Signature) != len(other.Signature) {
 		return false
 	}
+
 	for i := 0; i < len(in.Signature); i++ {
 		if in.Signature[i] != other.Signature[i] {
 			return false
+		}
+	}
+
+	if len(in.MultiSigSignature) != len(other.MultiSigSignature) {
+		return false
+	}
+
+	for i := range in.MultiSigSignature {
+		if len(in.MultiSigSignature[i]) != len(other.MultiSigSignature[i]) {
+			return false
+		}
+		for j := range in.MultiSigSignature[i] {
+			if in.MultiSigSignature[i][j] != other.MultiSigSignature[i][j] {
+				return false
+			}
 		}
 	}
 	return true
 }
 
 // Output represents a transaction output.
-// It includes a value (in bitcoins) and a recipient's RSA public key (serving as an address).
+// It includes a value (in coins) and a recipient's RSA public key (serving as an address).
 type Output struct {
 	Value             float64
 	Address           *rsa.PublicKey

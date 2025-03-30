@@ -36,6 +36,16 @@ var (
 	shortTxHashToLongTxHash map[string]string
 
 	userCounter = 4
+
+	addTxScreen        fyne.CanvasObject
+	rebuildAddTxScreen = func() {
+		addTxScreen = buildAddTransactionScreen()
+	}
+
+	mineBlockScreen        fyne.CanvasObject
+	rebuildMineBlockScreen = func() {
+		mineBlockScreen = buildMineBlockScreen()
+	}
 )
 
 func createNewUserPopup(w fyne.Window) {
@@ -50,6 +60,9 @@ func createNewUserPopup(w fyne.Window) {
 
 	keyPairs = append(keyPairs, newUser)
 	userCounter++
+
+	rebuildAddTxScreen()
+	rebuildMineBlockScreen()
 
 	dialog.ShowInformation("✅ Success", fmt.Sprintf("Created new user: %s", newUser.Name), w)
 }
@@ -543,33 +556,10 @@ func main() {
 	mainWindow.Resize(fyne.NewSize(800, 600))
 
 	// 1) Create genesis block
-	privateKey, _ := rsa.GenerateKey(rand.Reader, 1024)
-	publicKey := &privateKey.PublicKey
-	genesis := third_faza.NewBlock(nil, publicKey)
+	genesis := third_faza.NewBlock(nil, keyPairs[0].PublicKey)
 	genesis.Finalizee()
 	blockchain = third_faza.NewBlockchain(genesis)
 	third_faza.HandleBlocks(blockchain)
-
-	distTx := third_faza.NewTransaction()
-	distTx.AddInput(genesis.GetCoinbase().GetHash(), 0)
-
-	for _, kp := range keyPairs {
-		distTx.AddOutput(1.0, kp.PublicKey)
-	}
-	distTx.SignTx(privateKey, 0)
-	third_faza.TxProcess(distTx)
-
-	// 3) Mine a block with the distribution TX so it's confirmed
-	distBlock := third_faza.NewBlock(genesis.GetHash(), keyPairs[2].PublicKey)
-	distBlock.TransactionAdd(distTx)
-	distBlock.Finalizee()
-
-	ok := third_faza.BlockProcess(distBlock)
-	if !ok {
-		fmt.Println("Distribution block was rejected - check if input >= output.")
-	} else {
-		fmt.Println("Distribution block accepted! All users have 1 coins.")
-	}
 
 	// ============== UI: Blockchain screen with Refresh ==============
 	var updateBlockchainScreen func()
@@ -600,8 +590,7 @@ func main() {
 		mainContent.Objects = []fyne.CanvasObject{poolView}
 		mainContent.Refresh()
 	}
-	addTxScreen := buildAddTransactionScreen()
-	mineBlockScreen := buildMineBlockScreen()
+	rebuildMineBlockScreen() // builds it initially
 
 	// ============== HOME SCREEN ==============
 	homeTitle := widget.NewLabelWithStyle("🚀 Blockchain Visualizer", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
@@ -643,10 +632,12 @@ func main() {
 		updateTransactionPoolScreen()
 	})
 	addTxBtn := widget.NewButton("➕ Add Transaction", func() {
+		rebuildAddTxScreen()
 		mainContent.Objects = []fyne.CanvasObject{addTxScreen}
 		mainContent.Refresh()
 	})
 	mineBlockBtn := widget.NewButton("⛏️ Mine Block", func() {
+		rebuildMineBlockScreen() // ✅ Refresh screen with updated user list
 		mainContent.Objects = []fyne.CanvasObject{mineBlockScreen}
 		mainContent.Refresh()
 	})
