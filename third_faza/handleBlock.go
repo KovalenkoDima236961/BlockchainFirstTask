@@ -12,12 +12,9 @@ func HandleBlocks(blockChain *Blockchain) {
 
 func BlockProcess(block *Block) bool {
 	if block == nil {
-		println("nil block")
 		return false
 	}
 	res := blockchain.BlockAdd(block)
-	println("RESULTAT1 ===", res)
-	println("RESULTAT2 +++", res)
 	return res
 }
 
@@ -28,8 +25,6 @@ func BlockCreate(myAddress *rsa.PublicKey) *Block {
 	current := NewBlock(parentHash, myAddress)
 	uPool := blockchain.GetUTXOPoolAtMaxHeight()
 	txPool := blockchain.GetTransactionPool()
-
-	println("Len txPool: ", len(txPool.H))
 
 	HandleTxs(uPool)
 	txs := make([]*Transaction, 0)

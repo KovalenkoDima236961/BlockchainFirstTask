@@ -1,6 +1,7 @@
 package third_faza
 
 import (
+	"crypto/rsa"
 	"encoding/hex"
 	"errors"
 	"strconv"
@@ -25,7 +26,15 @@ func NewUTXOPool() *UTXOPool {
 func NewUTXOPoolWithPool(pool *UTXOPool) *UTXOPool {
 	newPool := &UTXOPool{H: make(map[string]Output)}
 	for k, v := range pool.H {
-		newPool.H[k] = v
+		var multiSigCopy []*rsa.PublicKey
+		if v.MultiSigAddresses != nil {
+			multiSigCopy = append([]*rsa.PublicKey(nil), v.MultiSigAddresses...)
+		}
+		newPool.H[k] = Output{
+			Value:             v.Value,
+			Address:           v.Address,
+			MultiSigAddresses: multiSigCopy,
+		}
 	}
 	return newPool
 }

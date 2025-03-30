@@ -8,14 +8,16 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"math"
+	"time"
 )
 
 // Input represents a transaction input.
 // It refers to a previous transaction's output that is being spent.
 type Input struct {
-	PrevTxHash  []byte
-	OutputIndex int
-	Signature   []byte
+	PrevTxHash        []byte
+	OutputIndex       int
+	Signature         []byte
+	MultiSigSignature [][]byte
 }
 
 // NewInput creates a new Input instance with a copy of the previous transaction hash and a specified output index.
@@ -32,6 +34,10 @@ func NewInput(prevHash []byte, index int) *Input {
 func (in *Input) AddSignature(sig []byte) {
 	in.Signature = make([]byte, len(sig))
 	copy(in.Signature, sig)
+}
+
+func (in *Input) AddMultiSignature(sig []byte) {
+	in.MultiSigSignature = append(in.MultiSigSignature, sig)
 }
 
 func (in *Input) Equals(other *Input) bool {
@@ -65,8 +71,9 @@ func (in *Input) Equals(other *Input) bool {
 // Output represents a transaction output.
 // It includes a value (in bitcoins) and a recipient's RSA public key (serving as an address).
 type Output struct {
-	Value   float64
-	Address *rsa.PublicKey
+	Value             float64
+	Address           *rsa.PublicKey
+	MultiSigAddresses []*rsa.PublicKey
 }
 
 // NewOutput creates a new Output with the specified value and recipient address.
@@ -74,6 +81,13 @@ func NewOutput(value float64, address *rsa.PublicKey) *Output {
 	return &Output{
 		Value:   value,
 		Address: address,
+	}
+}
+
+func NewMultiSigOutput(value float64, addresses []*rsa.PublicKey) *Output {
+	return &Output{
+		Value:             value,
+		MultiSigAddresses: addresses,
 	}
 }
 
@@ -95,18 +109,20 @@ func (out *Output) Equals(other *Output) bool {
 // Transaction represents a blockchain transaction.
 // It contains a unique hash, a list of inputs, and a list of outputs.
 type Transaction struct {
-	Hash     []byte
-	Inputs   []*Input
-	Outputs  []*Output
-	Coinbase bool
+	Hash      []byte
+	Inputs    []*Input
+	Outputs   []*Output
+	Coinbase  bool
+	Timestamp int64
 }
 
 // NewTransaction creates a new transaction with empty slices for inputs and outputs.
 func NewTransaction() *Transaction {
 	return &Transaction{
-		Inputs:   make([]*Input, 0),
-		Outputs:  make([]*Output, 0),
-		Coinbase: false,
+		Inputs:    make([]*Input, 0),
+		Outputs:   make([]*Output, 0),
+		Coinbase:  false,
+		Timestamp: time.Now().Unix(),
 	}
 }
 
@@ -114,10 +130,11 @@ func NewTransaction() *Transaction {
 // It copies the hash, all inputs (including their signatures), and outputs.
 func NewTransactionFromTransaction(tx *Transaction) *Transaction {
 	newTx := &Transaction{
-		Hash:     make([]byte, len(tx.Hash)),
-		Inputs:   make([]*Input, len(tx.Inputs)),
-		Outputs:  make([]*Output, len(tx.Outputs)),
-		Coinbase: false,
+		Hash:      make([]byte, len(tx.Hash)),
+		Inputs:    make([]*Input, len(tx.Inputs)),
+		Outputs:   make([]*Output, len(tx.Outputs)),
+		Coinbase:  false,
+		Timestamp: tx.Timestamp,
 	}
 	copy(newTx.Hash, tx.Hash)
 
@@ -125,16 +142,18 @@ func NewTransactionFromTransaction(tx *Transaction) *Transaction {
 		newSig := make([]byte, len(in.Signature))
 		copy(newSig, in.Signature)
 		newTx.Inputs[i] = &Input{
-			PrevTxHash:  append([]byte{}, in.PrevTxHash...),
-			OutputIndex: in.OutputIndex,
-			Signature:   newSig,
+			PrevTxHash:        append([]byte{}, in.PrevTxHash...),
+			OutputIndex:       in.OutputIndex,
+			Signature:         newSig,
+			MultiSigSignature: in.MultiSigSignature,
 		}
 	}
 
 	for i, op := range tx.Outputs {
 		newTx.Outputs[i] = &Output{
-			Value:   op.Value,
-			Address: op.Address,
+			Value:             op.Value,
+			Address:           op.Address,
+			MultiSigAddresses: op.MultiSigAddresses,
 		}
 	}
 
@@ -143,9 +162,10 @@ func NewTransactionFromTransaction(tx *Transaction) *Transaction {
 
 func NewCoinbaseTransaction(coin float64, address *rsa.PublicKey) *Transaction {
 	newTx := &Transaction{
-		Inputs:   make([]*Input, 0),
-		Outputs:  make([]*Output, 0),
-		Coinbase: true,
+		Inputs:    make([]*Input, 0),
+		Outputs:   make([]*Output, 0),
+		Coinbase:  true,
+		Timestamp: time.Now().Unix(),
 	}
 	newTx.AddOutput(coin, address)
 	newTx.Finalize()
@@ -165,6 +185,10 @@ func (tx *Transaction) AddInput(prevTxHash []byte, outputIndex int) {
 // AddOutput appends a new output to the transaction with the given value and recipient address.
 func (tx *Transaction) AddOutput(value float64, address *rsa.PublicKey) {
 	tx.Outputs = append(tx.Outputs, &Output{Value: value, Address: address})
+}
+
+func (tx *Transaction) AddMultisigOutput(multisig *Output) {
+	tx.Outputs = append(tx.Outputs, &Output{Value: multisig.Value, MultiSigAddresses: multisig.MultiSigAddresses})
 }
 
 // RemoveInput removes the input at the specified index, if the index is valid.
@@ -196,8 +220,12 @@ func (tx *Transaction) GetDataToSign(index int) []byte {
 
 	in := tx.Inputs[index]
 	data := make([]byte, 0)
-	data = append(data, in.PrevTxHash...)
 
+	timestampBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(timestampBytes, uint64(tx.Timestamp))
+	data = append(data, timestampBytes...)
+
+	data = append(data, in.PrevTxHash...)
 	buf := make([]byte, 4)
 	binary.BigEndian.PutUint32(buf, uint32(in.OutputIndex))
 	data = append(data, buf...)
@@ -207,11 +235,26 @@ func (tx *Transaction) GetDataToSign(index int) []byte {
 		binary.BigEndian.PutUint64(valBuf, math.Float64bits(op.Value))
 		data = append(data, valBuf...)
 
-		expBuf := make([]byte, 4)
-		binary.BigEndian.PutUint32(expBuf, uint32(op.Address.E))
-		data = append(data, expBuf...)
+		if op.MultiSigAddresses != nil && len(op.MultiSigAddresses) > 0 {
+			data = append(data, byte(1))
+			countBuf := make([]byte, 4)
+			binary.BigEndian.PutUint32(countBuf, uint32(len(op.MultiSigAddresses)))
+			data = append(data, countBuf...)
 
-		data = append(data, op.Address.N.Bytes()...)
+			for _, pubKey := range op.MultiSigAddresses {
+				expBuf := make([]byte, 4)
+				binary.BigEndian.PutUint32(expBuf, uint32(pubKey.E))
+				data = append(data, expBuf...)
+				data = append(data, pubKey.N.Bytes()...)
+			}
+		} else if op.Address != nil {
+			expBuf := make([]byte, 4)
+			binary.BigEndian.PutUint32(expBuf, uint32(op.Address.E))
+			data = append(data, expBuf...)
+			data = append(data, op.Address.N.Bytes()...)
+		} else {
+			continue
+		}
 	}
 
 	return data
@@ -231,6 +274,10 @@ func (tx *Transaction) GetTx() []byte {
 	// Add here timestamp
 	data := make([]byte, 0)
 
+	timestampBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(timestampBytes, uint64(tx.Timestamp))
+	data = append(data, timestampBytes...)
+
 	for _, in := range tx.Inputs {
 		data = append(data, in.PrevTxHash...)
 		buf := make([]byte, 4)
@@ -246,11 +293,25 @@ func (tx *Transaction) GetTx() []byte {
 		binary.BigEndian.PutUint64(valBuf, math.Float64bits(op.Value))
 		data = append(data, valBuf...)
 
-		expBuf := make([]byte, 4)
-		binary.BigEndian.PutUint32(expBuf, uint32(op.Address.E))
-		data = append(data, expBuf...)
+		if op.MultiSigAddresses != nil && len(op.MultiSigAddresses) > 0 {
+			countBuf := make([]byte, 4)
+			binary.BigEndian.PutUint32(countBuf, uint32(len(op.MultiSigAddresses)))
+			data = append(data, countBuf...)
 
-		data = append(data, op.Address.N.Bytes()...)
+			for _, pubKey := range op.MultiSigAddresses {
+				expBuf := make([]byte, 4)
+				binary.BigEndian.PutUint32(expBuf, uint32((pubKey.E)))
+				data = append(data, expBuf...)
+				data = append(data, pubKey.N.Bytes()...)
+			}
+		} else if op.Address != nil {
+			expBuf := make([]byte, 4)
+			binary.BigEndian.PutUint32(expBuf, uint32(op.Address.E))
+			data = append(data, expBuf...)
+			data = append(data, op.Address.N.Bytes()...)
+		} else {
+			continue
+		}
 	}
 
 	return data
@@ -327,5 +388,16 @@ func (tx *Transaction) SignTx(sk *rsa.PrivateKey, input int) {
 		panic(err)
 	}
 	tx.AddSignature(sig1, input)
+	tx.Finalize()
+}
+
+func (tx *Transaction) SignMultiSigTx(privKey *rsa.PrivateKey, inputIndex int) {
+	dataToSign := tx.GetDataToSign(inputIndex)
+	hashData1 := sha256.Sum256(dataToSign)
+	sig, err := rsa.SignPKCS1v15(rand.Reader, privKey, crypto.SHA256, hashData1[:])
+	if err != nil {
+		panic(err)
+	}
+	tx.Inputs[inputIndex].AddMultiSignature(sig)
 	tx.Finalize()
 }

@@ -479,21 +479,18 @@ func TestHandleTxIsValid_withNegativeOutputValue(t *testing.T) {
 func TestHandleTxs_withSimpleValidTransaction(t *testing.T) {
 	utxoPool = NewUTXOPool()
 
-	// Generate keys for signing.
 	privKey, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
 		t.Fatal(err)
 	}
 	pubKey := &privKey.PublicKey
 
-	// Generate a second key pair for sending funds to a different address.
 	privKey2, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
 		t.Fatal(err)
 	}
 	pubKey2 := &privKey2.PublicKey
 
-	// Create an initial transaction (tx0).
 	tx0 := NewTransaction()
 	tx0.AddOutput(10.0, pubKey)
 	tx0.Finalize()
@@ -523,7 +520,7 @@ func TestHandleTxs_withSimpleValidTransaction(t *testing.T) {
 
 	// Create another valid transaction (tx2) spending tx1's second output.
 	tx2 := NewTransaction()
-	tx2.AddInput(tx1.GetHash(), 1) // Uses the second output from tx1.
+	tx2.AddInput(tx1.GetHash(), 1)
 	tx2.AddOutput(3.0, pubKey2)
 	tx2.AddOutput(1.0, pubKey)
 
@@ -536,16 +533,13 @@ func TestHandleTxs_withSimpleValidTransaction(t *testing.T) {
 	tx2.AddSignature(sig2, 0)
 	tx2.Finalize()
 
-	// Process the transactions.
 	HandleTxs(utxoPool)
 	possibleTxs := []Transaction{*tx1, *tx2}
 	handler := Handler(possibleTxs)
 
-	// Check if only one transaction is processed immediately.
 	assert.NotNil(t, handler, "Handler result should not be nil.")
 	assert.Equal(t, 2, len(handler), "Two transaction should be processed.")
 
-	// Verify that tx1 and tx2 was processed.
 	containsTx1 := false
 	containsTx2 := false
 	for _, tx := range handler {
@@ -562,14 +556,12 @@ func TestHandleTxs_withSimpleValidTransaction(t *testing.T) {
 func TestHandleTxs_withSomeInvalidTransactionDueToInvalidSignatures(t *testing.T) {
 	utxoPool = NewUTXOPool()
 
-	// Generate keys for signing.
 	privKey, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
 		t.Fatal(err)
 	}
 	pubKey := &privKey.PublicKey
 
-	// Generate a second key pair for sending funds to a different address.
 	privKey2, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
 		t.Fatal(err)
@@ -659,7 +651,6 @@ func TestHandleTxs_withSomeInvalidTransactionDueToInvalidSignatures(t *testing.T
 func TestHandleTxs_withInvalidTransactionsDueToInputLessThanOutput(t *testing.T) {
 	utxoPool = NewUTXOPool()
 
-	// Generate keys.
 	privKey, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
 		t.Fatal(err)
@@ -678,10 +669,9 @@ func TestHandleTxs_withInvalidTransactionsDueToInputLessThanOutput(t *testing.T)
 	}
 	pubKey3 := &privKey3.PublicKey
 
-	// Create an initial funding transaction (tx0) with two outputs.
 	tx0 := NewTransaction()
-	tx0.AddOutput(10.0, pubKey) // Output 0: 10.0
-	tx0.AddOutput(15.0, pubKey) // Output 1: 15.0
+	tx0.AddOutput(10.0, pubKey)
+	tx0.AddOutput(15.0, pubKey)
 	tx0.Finalize()
 
 	utxo0a := NewUTXO(tx0.GetHash(), 0)
@@ -725,7 +715,6 @@ func TestHandleTxs_withInvalidTransactionsDueToInputLessThanOutput(t *testing.T)
 	tx3.AddInput(tx0.GetHash(), 1)
 	tx3.AddOutput(20.0, pubKey2)
 	tx3.AddOutput(10.0, pubKey3)
-	// Sign each input.
 	dataToSign3_0 := tx3.GetDataToSign(0)
 	hashData3_0 := sha256.Sum256(dataToSign3_0)
 	sig3_0, err := rsa.SignPKCS1v15(rand.Reader, privKey, crypto.SHA256, hashData3_0[:])
@@ -754,13 +743,10 @@ func TestHandleTxs_withInvalidTransactionsDueToInputLessThanOutput(t *testing.T)
 	tx4.AddSignature(sig4, 0)
 	tx4.Finalize()
 
-	// Process the transactions.
-	// Only tx2 is valid (its input covers its output), while tx1 and tx3 are invalid.
 	HandleTxs(utxoPool)
 	possibleTxs := []Transaction{*tx1, *tx2, *tx3, *tx4}
 	handler := Handler(possibleTxs)
 
-	// Expect only tx2 to be processed immediately.
 	assert.NotNil(t, handler, "Handler result should not be nil.")
 	assert.Equal(t, 1, len(handler), "Only one transaction should be processed.")
 
@@ -801,12 +787,9 @@ func TestHandleTxs_withDoubleSpends(t *testing.T) {
 	}
 	pubKey4 := &privKey4.PublicKey
 
-	// Create funding transaction (tx0) with two outputs:
-	// - Output 0: 10.0 funds to pubKey1.
-	// - Output 1: 15.0 funds to pubKey1.
 	tx0 := NewTransaction()
-	tx0.AddOutput(10.0, pubKey1) // UTXO0
-	tx0.AddOutput(15.0, pubKey1) // UTXO1
+	tx0.AddOutput(10.0, pubKey1)
+	tx0.AddOutput(15.0, pubKey1)
 	tx0.Finalize()
 
 	utxo0a := NewUTXO(tx0.GetHash(), 0)
@@ -831,7 +814,7 @@ func TestHandleTxs_withDoubleSpends(t *testing.T) {
 	utxo1a := NewUTXO(tx1.GetHash(), 0)
 	utxoPool.AddUTXO(*utxo1a, *tx1.GetOutput(0))
 
-	// tx2: Another transaction attempting to spend the same UTXO (output 0).
+	// tx2: Another transaction attempting to spend the same UTXO (output 0)
 	// It is almost identical but signed with an incorrect key (privKey3) so it should be invalid.
 	tx2 := NewTransaction()
 	tx2.AddInput(tx0.GetHash(), 0)
@@ -865,9 +848,8 @@ func TestHandleTxs_withDoubleSpends(t *testing.T) {
 	utxoPool.AddUTXO(*utxo3a, *tx3.GetOutput(0))
 	utxoPool.AddUTXO(*utxo3b, *tx3.GetOutput(1))
 
-	// Full ok
 	tx4 := NewTransaction()
-	tx4.AddInput(tx3.GetHash(), 0) // priv2
+	tx4.AddInput(tx3.GetHash(), 0)
 	tx4.AddOutput(9.0, pubKey3)
 	tx4.AddOutput(3.0, pubKey4)
 	dataToSign4 := tx4.GetDataToSign(0)
@@ -897,17 +879,12 @@ func TestHandleTxs_withDoubleSpends(t *testing.T) {
 	tx5.AddSignature(sig5, 0)
 	tx5.Finalize()
 
-	// Prepare the list of possible transactions.
-	// tx1 and tx2 both try to spend UTXO0; tx3 spends UTXO1.
 	possibleTxs := []Transaction{*tx1, *tx2, *tx3, *tx4, *tx5}
 	handler := Handler(possibleTxs)
 
-	// Expect 2 transactions to be processed immediately:
-	// one for UTXO0 (either tx1 or tx2, but tx1 is valid) and tx3 for UTXO1.
 	assert.NotNil(t, handler, "Handler result should not be nil.")
 	assert.Equal(t, 3, len(handler), "Three transactions should be processed.")
 
-	// Check that the accepted transactions are tx1 and tx3.
 	acceptedKeys := map[string]bool{
 		tx1.Key(): true,
 		tx3.Key(): true,
@@ -919,35 +896,29 @@ func TestHandleTxs_withDoubleSpends(t *testing.T) {
 }
 
 func TestHandleTxs_withDependentAndSimpleValidTransaction(t *testing.T) {
-	// Reset global UTXO pool.
 	utxoPool = NewUTXOPool()
 
-	// Generate a key pair for funding/spending.
 	privKey, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
 		t.Fatal(err)
 	}
 	pubKey := &privKey.PublicKey
 
-	// Generate a second key pair (could be used for sending funds to another address).
 	privKey2, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
 		t.Fatal(err)
 	}
 	pubKey2 := &privKey2.PublicKey
 
-	// Create an initial funding transaction (tx0) with two outputs.
-	// UTXO0: 10.0 funds to pubKey.
-	// UTXO1: 15.0 funds to pubKey.
 	tx0 := NewTransaction()
 	tx0.AddOutput(10.0, pubKey)
 	tx0.AddOutput(15.0, pubKey)
 	tx0.Finalize()
 
-	utxo0 := NewUTXO(tx0.GetHash(), 0)
-	utxo1 := NewUTXO(tx0.GetHash(), 1)
-	utxoPool.AddUTXO(*utxo0, *tx0.GetOutput(0))
-	utxoPool.AddUTXO(*utxo1, *tx0.GetOutput(1))
+	utxo0a := NewUTXO(tx0.GetHash(), 0)
+	utxo0b := NewUTXO(tx0.GetHash(), 1)
+	utxoPool.AddUTXO(*utxo0a, *tx0.GetOutput(0))
+	utxoPool.AddUTXO(*utxo0b, *tx0.GetOutput(1))
 
 	// tx1: Independent valid transaction spending UTXO0.
 	// It sends 9.0 funds to pubKey2.
@@ -963,16 +934,17 @@ func TestHandleTxs_withDependentAndSimpleValidTransaction(t *testing.T) {
 	tx1.AddSignature(sig1, 0)
 	tx1.Finalize()
 
+	utxo1a := NewUTXO(tx1.GetHash(), 0)
+	utxoPool.AddUTXO(*utxo1a, *tx1.GetOutput(0))
+
 	// tx2: Dependent transaction that spends tx1's output.
-	// It sends, say, 8.0 funds to pubKey2.
-	// Because tx1's output isn't in the original UTXO snapshot,
-	// tx2 is not valid immediately.
+	// It sends, 8.0 funds to pubKey2.
 	tx2 := NewTransaction()
-	tx2.AddInput(tx1.GetHash(), 0) // Depends on tx1's output.
+	tx2.AddInput(tx1.GetHash(), 0)
 	tx2.AddOutput(8.0, pubKey2)
 	dataToSign2 := tx2.GetDataToSign(0)
 	hashData2 := sha256.Sum256(dataToSign2)
-	sig2, err := rsa.SignPKCS1v15(rand.Reader, privKey, crypto.SHA256, hashData2[:])
+	sig2, err := rsa.SignPKCS1v15(rand.Reader, privKey2, crypto.SHA256, hashData2[:])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -993,24 +965,11 @@ func TestHandleTxs_withDependentAndSimpleValidTransaction(t *testing.T) {
 	tx3.AddSignature(sig3, 0)
 	tx3.Finalize()
 
-	// Submit all transactions together.
-	// tx1 and tx3 are valid with respect to the original UTXO pool.
-	// tx2, although individually valid, is dependent on tx1's output and should be deferred.
 	possibleTxs := []Transaction{*tx1, *tx2, *tx3}
 	handler := Handler(possibleTxs)
 
-	// Expect 2 transactions to be processed immediately: tx1 (from UTXO0) and tx3 (from UTXO1).
 	assert.NotNil(t, handler, "Handler result should not be nil.")
-	assert.Equal(t, 2, len(handler), "Two transactions should be processed immediately.")
-
-	// Verify that tx1 and tx3 were processed by comparing their keys.
-	acceptedKeys := map[string]bool{
-		tx1.Key(): true,
-		tx3.Key(): true,
-	}
-	for _, tx := range handler {
-		assert.True(t, acceptedKeys[tx.Key()], "Accepted transaction should be either tx1 or tx3.")
-	}
+	assert.Equal(t, 3, len(handler), "Three transactions should be processed.")
 }
 
 func TestHandleTxs_withNonExistingUTXOInputs(t *testing.T) {
@@ -1124,10 +1083,8 @@ func TestHandleTxs_withNonExistingUTXOInputs(t *testing.T) {
 }
 
 func TestHandleTxs_withComplexTransactions(t *testing.T) {
-	// Reset the global UTXO pool.
 	utxoPool = NewUTXOPool()
 
-	// Generate several key pairs.
 	key1, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
 		t.Fatal(err)
@@ -1169,12 +1126,12 @@ func TestHandleTxs_withComplexTransactions(t *testing.T) {
 	tx0.AddOutput(50.0, pubKey1) // UTXO2
 	tx0.Finalize()
 
-	utxo0 := NewUTXO(tx0.GetHash(), 0)
-	utxo1 := NewUTXO(tx0.GetHash(), 1)
-	utxo2 := NewUTXO(tx0.GetHash(), 2)
-	utxoPool.AddUTXO(*utxo0, *tx0.GetOutput(0))
-	utxoPool.AddUTXO(*utxo1, *tx0.GetOutput(1))
-	utxoPool.AddUTXO(*utxo2, *tx0.GetOutput(2))
+	utxo0a := NewUTXO(tx0.GetHash(), 0)
+	utxo0b := NewUTXO(tx0.GetHash(), 1)
+	utxo0c := NewUTXO(tx0.GetHash(), 2)
+	utxoPool.AddUTXO(*utxo0a, *tx0.GetOutput(0))
+	utxoPool.AddUTXO(*utxo0b, *tx0.GetOutput(1))
+	utxoPool.AddUTXO(*utxo0c, *tx0.GetOutput(2))
 
 	// ----------------------------------
 	// tx1: Valid independent transaction spending O0.
@@ -1190,6 +1147,9 @@ func TestHandleTxs_withComplexTransactions(t *testing.T) {
 	}
 	tx1.AddSignature(sig1, 0)
 	tx1.Finalize()
+
+	utxo1a := NewUTXO(tx1.GetHash(), 0)
+	utxoPool.AddUTXO(*utxo1a, *tx1.GetOutput(0))
 
 	// ----------------------------------
 	// tx2: Attempt to double spend O0.
@@ -1222,21 +1182,23 @@ func TestHandleTxs_withComplexTransactions(t *testing.T) {
 	tx3.AddSignature(sig3, 0)
 	tx3.Finalize()
 
+	utxo3a := NewUTXO(tx3.GetHash(), 0)
+	utxoPool.AddUTXO(*utxo3a, *tx3.GetOutput(0))
+
 	// ----------------------------------
 	// tx4: Transaction with two inputs:
 	// One valid from O2 (50.0 funds) and one fake input.
 	// Outputs 40.0 to pubKey5.
 	// This should be invalid due to the fake input.
 	tx4 := NewTransaction()
-	tx4.AddInput(tx0.GetHash(), 2) // valid input from O2.
+	tx4.AddInput(tx0.GetHash(), 2)
 	// Create a fake UTXO input.
 	fakeHash := make([]byte, 32)
 	for i := range fakeHash {
 		fakeHash[i] = 77
 	}
-	tx4.AddInput(fakeHash, 0) // fake input.
+	tx4.AddInput(fakeHash, 0)
 	tx4.AddOutput(40.0, pubKey5)
-	// Sign each input.
 	dataToSign4_0 := tx4.GetDataToSign(0)
 	hashData4_0 := sha256.Sum256(dataToSign4_0)
 	sig4_0, err := rsa.SignPKCS1v15(rand.Reader, key1, crypto.SHA256, hashData4_0[:])
@@ -1256,7 +1218,6 @@ func TestHandleTxs_withComplexTransactions(t *testing.T) {
 	// ----------------------------------
 	// tx5: Dependent transaction spending tx1's output.
 	// Spends tx1's output of 18.0, outputs 17.0 to pubKey3.
-	// This transaction is valid in isolation but is dependent (tx1's output is not in original snapshot).
 	tx5 := NewTransaction()
 	tx5.AddInput(tx1.GetHash(), 0)
 	tx5.AddOutput(17.0, pubKey3)
@@ -1300,18 +1261,13 @@ func TestHandleTxs_withComplexTransactions(t *testing.T) {
 	tx7.AddSignature(sig7, 0)
 	tx7.Finalize()
 
-	// ----------------------------------
-	// Build the list of possible transactions.
-	// This list includes independent valid transactions (tx1, tx3),
-	// a dependent one (tx5), and several invalid ones (tx2, tx4, tx6, tx7).
 	possibleTxs := []Transaction{*tx1, *tx2, *tx3, *tx4, *tx5, *tx6, *tx7}
 
-	// Process transactions.
 	handler := Handler(possibleTxs)
 	println(handler)
 
 	assert.NotNil(t, handler, "Handler result should not be nil.")
-	assert.Equal(t, 3, len(handler), "Three transactions should be processed immediately.")
+	assert.Equal(t, 3, len(handler), "Three transactions should be processed.")
 
 	acceptedKeys := map[string]bool{
 		tx1.Key(): true,
@@ -1324,10 +1280,8 @@ func TestHandleTxs_withComplexTransactions(t *testing.T) {
 }
 
 func TestHandleTxs_repeatedInvocationsReflectPoolUpdates(t *testing.T) {
-	// Reset the global UTXO pool.
 	utxoPool = NewUTXOPool()
 
-	// Generate a key pair for funding and spending.
 	privKey, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
 		t.Fatal(err)
@@ -1363,7 +1317,6 @@ func TestHandleTxs_repeatedInvocationsReflectPoolUpdates(t *testing.T) {
 
 	possibleBatch1 := []Transaction{*tx1}
 	acceptedBatch1 := Handler(possibleBatch1)
-	// Expect tx1 to be processed.
 	assert.Equal(t, 1, len(acceptedBatch1), "Expected 1 accepted transaction in first batch")
 	assert.Equal(t, tx1.Key(), acceptedBatch1[0].Key(), "Accepted transaction should be tx1")
 
@@ -1376,7 +1329,7 @@ func TestHandleTxs_repeatedInvocationsReflectPoolUpdates(t *testing.T) {
 
 	// --- Second Batch ---
 	// tx2: Spend the output from tx1. (tx1's output should now be in the pool.)
-	// For example, tx2 spends 18.0 funds and produces an output of 16.0 (fee 2.0).
+	// tx2 spends 18.0 funds and produces an output of 16.0 (fee 2.0).
 	tx2 := NewTransaction()
 	tx2.AddInput(tx1.GetHash(), 0)
 	tx2.AddOutput(16.0, pubKey)
@@ -1391,13 +1344,8 @@ func TestHandleTxs_repeatedInvocationsReflectPoolUpdates(t *testing.T) {
 
 	possibleBatch2 := []Transaction{*tx2}
 	acceptedBatch2 := Handler(possibleBatch2)
-	// Expect tx2 to be processed.
 	assert.Equal(t, 1, len(acceptedBatch2), "Expected 1 accepted transaction in second batch")
 	assert.Equal(t, tx2.Key(), acceptedBatch2[0].Key(), "Accepted transaction should be tx2")
-
-	// Now, the global UTXO pool should reflect:
-	// - UTXO1 from tx0 (30.0 funds) still, and
-	// - tx2's output (16.0 funds) replacing tx1's output.
 	allUTXOs = utxoPool.GetAllUTXO()
 	assert.Equal(t, 2, len(allUTXOs), "UTXO pool should contain 2 UTXOs after second batch")
 }

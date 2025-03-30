@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Test 1: proces bloku bez transakci\'ed\
 func TestBlockchain_processBlock_Without_Transaction(t *testing.T) {
 
 	privateKeyBob, err := rsa.GenerateKey(rand.Reader, 1024)
@@ -40,7 +39,6 @@ func TestBlockchain_processBlock_Without_Transaction(t *testing.T) {
 	assert.True(t, result, "Block with no transactions should be accepted")
 }
 
-// Test 2: proces blok s jednou platnou transakciou\
 func TestBlockchain_processBlock_With_One_Transaction(t *testing.T) {
 	privateKeyBob, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
@@ -77,7 +75,6 @@ func TestBlockchain_processBlock_With_One_Transaction(t *testing.T) {
 	assert.True(t, result, "Block with one transactions should be accepted")
 }
 
-// Test 3: proces blok s ve\uc0\u318 a platn\'fdmi transakciami\
 func TestBlockchain_processBlock_With_A_Lot_Transaction(t *testing.T) {
 	privateKeyBob, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
@@ -131,7 +128,6 @@ func TestBlockchain_processBlock_With_A_Lot_Transaction(t *testing.T) {
 	assert.True(t, result, "Second Block with few transactions should be accepted")
 }
 
-// Test 4: proces blok s nieko\uc0\u318 k\'fdmi double-spend\
 func TestBlockchain_processBlock_With_Some_DoubleSpend(t *testing.T) {
 	privateKeyBob, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
@@ -191,7 +187,6 @@ func TestBlockchain_processBlock_With_Some_DoubleSpend(t *testing.T) {
 	assert.False(t, result, "Second Block with few invalid transactions shouldn't be accepted")
 }
 
-// Test 5: proces nov\'fd genesis blok
 func TestBlockchain_processBlock_With_New_GenesisBlock(t *testing.T) {
 	privateKeyBob, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
@@ -218,7 +213,6 @@ func TestBlockchain_processBlock_With_New_GenesisBlock(t *testing.T) {
 	assert.False(t, result, "Second genesis block shouldn't be accepted")
 }
 
-// Test 6: proces blok s neplatn\'fdm prevBlockHash\
 func TestBlockchain_processBlock_With_Incorrect_PrevBlockHash(t *testing.T) {
 	privateKeyBob, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
@@ -283,7 +277,6 @@ func TestBlockchain_processBlock_With_Incorrect_PrevBlockHash(t *testing.T) {
 	assert.False(t, result, "Second Block with few transactions should be accepted")
 }
 
-// Test 7: proces blok s r\'f4znymi typmi neplatn\'fdch transakci\'ed\
 func TestBlockchain_processBlock_With_DifferentTypeInvalidTransactions(t *testing.T) {
 	privateKeyBob, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
@@ -373,7 +366,6 @@ func TestBlockchain_processBlock_With_DifferentTypeInvalidTransactions(t *testin
 	assert.False(t, result, "Block should be rejected due to input < output in transaction without using coinbase")
 }
 
-// Test 8: proces viacero blokov priamo nad genesis blokom\
 func TestBlockchain_processBlock_WithFewBlocksAboveGenesisBlock(t *testing.T) {
 	privateKeyBob, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
@@ -454,7 +446,6 @@ func TestBlockchain_processBlock_WithFewBlocksAboveGenesisBlock(t *testing.T) {
 	assert.Equal(t, 3, number_of_nodes, "Should be 3 blocks above genesis block")
 }
 
-// Test 9: proces blok obsahuj\'faci transakciu, ktor\'e1 si n\'e1rokuje UTXO, ktor\'e9 u\'9e bolo n\'e1rokovan\'e9 transakciou u rodi\uc0\u269 a\
 func TestBlockchain_processBlock_ThatClaimsUTXO_whichHasAlreadyBeenClaimedByTransactionInTheParentBlock(t *testing.T) {
 	privateKeyBob, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
@@ -499,7 +490,6 @@ func TestBlockchain_processBlock_ThatClaimsUTXO_whichHasAlreadyBeenClaimedByTran
 	assert.False(t, result, "Second Block have transaction that used utxo which was already claimed by transaction in parent block")
 }
 
-// Test 10: proces blok obsahuj\'faci transakciu, ktor\'e1 si n\'e1rokuje UTXO mimo jeho vetvy\
 func TestBlockchain_processBlock_WhichContaining_Transaction_ThatClaims_UTXO_From_Outside_Its_Branch(t *testing.T) {
 	privateKeyBob, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
@@ -549,7 +539,7 @@ func TestBlockchain_processBlock_WhichContaining_Transaction_ThatClaims_UTXO_Fro
 	txB_2_1 := NewTransaction()
 	txB_2_1.AddInput(blockA.GetCoinbase().GetHash(), 0)
 	txB_2_1.AddOutput(1, pubKeyAlice)
-	txB_2_1.AddOutput(1.125, pubKeyBob)
+	txB_2_1.AddOutput(1, pubKeyBob)
 	txB_2_1.SignTx(privateKeyAlice, 0)
 
 	blockB_2.TransactionAdd(txB_2_1)
@@ -576,7 +566,6 @@ func TestBlockchain_processBlock_WhichContaining_Transaction_ThatClaims_UTXO_Fro
 
 }
 
-// Test 11: proces blok obsahuj\'faci transakciu, ktor\'e1 si n\'e1rokuje star\'9aie UTXO v r\'e1mci vetvy, ktor\'e9 e\'9ate nebolo n\'e1rokovan\'e9 \
 func TestBlockchain_processBlock_WhichContaining_Transaction_ThatClaimsAnOlderUTXO_WithinTheSameBranch_ThatHasNotYetBeenClaimed(t *testing.T) {
 	privateKeyBob, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
@@ -643,7 +632,6 @@ func TestBlockchain_processBlock_WhichContaining_Transaction_ThatClaimsAnOlderUT
 	assert.True(t, result, "Third Block should be accepted because contain transaction that claims an older utxo within the same branch")
 }
 
-// Test 12: proces line\'e1rnu re\uc0\u357 az blokov\
 func TestBlockchain_processBlock_LinearChainOfBlocks(t *testing.T) {
 	privateKeyBob, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
@@ -733,7 +721,6 @@ func TestBlockchain_processBlock_LinearChainOfBlocks(t *testing.T) {
 	assert.Equal(t, 5, number_of_nodes, "Blockchain should contain 5 nodes")
 }
 
-// Test 13: proces line\'e1rnu re\uc0\u357 az blokov d\u314 \'9eky CUT_OFF_AGE a potom blok na vrchu genesis bloku\
 func TestBlockchain_processBlock_LinearChainOfLength_CUTOFFAGE_PlusOne_ThenBlockOnGenesis_ShouldFail(t *testing.T) {
 	privateKeyBob, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
@@ -778,7 +765,6 @@ func TestBlockchain_processBlock_LinearChainOfLength_CUTOFFAGE_PlusOne_ThenBlock
 	assert.False(t, result, "Block on Genesis should be rejected because it is outside the CUT_OFF_AGE range")
 }
 
-// Test 14: proces line\'e1rnu re\uc0\u357 az blokov d\u314 \'9eky CUT_OFF_AGE + 1 a potom blok na vrchu genesis bloku\
 func TestBlockchain_processBlock_LinearChainOfBlocksOfLength_CUT_OFF_AGE_Plus_One_ThenBlockOnTopOfTheGenesisBlock(t *testing.T) {
 	privateKeyBob, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
@@ -813,7 +799,6 @@ func TestBlockchain_processBlock_LinearChainOfBlocksOfLength_CUT_OFF_AGE_Plus_On
 	}
 }
 
-// Test 15: vytvor blok, ke\uc0\u271  neboli sprocesovan\'e9 \'9eiadne transakcie\
 func TestBlockchain_createBlock_WhenNoTransactionHaveBeenProcessed(t *testing.T) {
 	privateKeyBob, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
@@ -831,7 +816,6 @@ func TestBlockchain_createBlock_WhenNoTransactionHaveBeenProcessed(t *testing.T)
 	assert.NotNil(t, block, "Block with only coinbase and no transaction should be accepted")
 }
 
-// Test 16: vytvor blok po sprocesovan\'ed jednej platnej transakcie\
 func TestBlockchain_createBlock_AfterProcessingOneValidTransaction(t *testing.T) {
 	privateKeyBob, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
@@ -863,7 +847,6 @@ func TestBlockchain_createBlock_AfterProcessingOneValidTransaction(t *testing.T)
 	assert.NotNil(t, block, "Block with only one valid transaction should be accepted")
 }
 
-// Test 17: vytvor blok po sprocesovan\'ed platnej transakcie a potom vytvor druh\'fd blok\
 func TestBlockchain_createBlock_AfterProcessingValidTransaction_AndThenCreateSecondBlock(t *testing.T) {
 	privateKeyBob, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
@@ -913,7 +896,6 @@ func TestBlockchain_createBlock_AfterProcessingValidTransaction_AndThenCreateSec
 	assert.NotNil(t, block2, "Block with only coinbase and no transaction should be accepted")
 }
 
-// Test 18: vytvor blok po sprocesovan\'ed platnej transakcie, ktor\'e1 u\'9e je v bloku v najdlh\'9aej platnej vetve\
 func TestBlockchain_createBlock_AfterProcessingValidTransaction_WhichIsAlreadyInABlockInTheLongestValidBranch(t *testing.T) {
 	privateKeyBob, _ := rsa.GenerateKey(rand.Reader, 1024)
 	pubKeyBob := &privateKeyBob.PublicKey
@@ -953,7 +935,6 @@ func TestBlockchain_createBlock_AfterProcessingValidTransaction_WhichIsAlreadyIn
 	assert.Equal(t, 1, len(blockB.GetTransactions()), "Block B should contain only the coinbase transaction")
 }
 
-// Test 19: vytvor blok po sprocesovan\'ed platnej transakcie, ktor\'e1 vyu\'9e\'edva UTXO, ktor\'e9 u\'9e bolo n\'e1rokovan\'e9 transakciou v najdlh\'9aej platnej vetve\
 func TestBlockchain_createBlock_AfterProcessingValidTransaction_WhichUsesAUTXOThatHasAlreadyBeenClaimedByATransactionInTheLongestValidChain(t *testing.T) {
 	privateKeyBob, _ := rsa.GenerateKey(rand.Reader, 1024)
 	pubKeyBob := &privateKeyBob.PublicKey
@@ -997,7 +978,6 @@ func TestBlockchain_createBlock_AfterProcessingValidTransaction_WhichUsesAUTXOTh
 	assert.Equal(t, 1, len(blockB.GetTransactions()), "Block B should contain only the coinbase transaction")
 }
 
-// Test 20: vytvor blok po sprocesovan\'ed platnej transakcie, ktor\'e1 nie je double spend v najdlh\'9aej platnej vetve a e\'9ate nebola pou\'9eit\'e1 v \'9eiadnom inom bloku\
 func TestBlockchain_createBlock_AfterProcessingAValidTransactionThatIsNotADoubleSpendInTheLongestValidBranch_AndHasntBeenUsedInAnyOtherBlockYet(t *testing.T) {
 	privateKeyBob, _ := rsa.GenerateKey(rand.Reader, 1024)
 	pubKeyBob := &privateKeyBob.PublicKey
@@ -1226,7 +1206,6 @@ func TestBlockchain_processTransaction_CreateBlock_ProcessBlockOnTopOfThatBlockW
 	assert.True(t, result, "Second Block with few valid transactions should be accepted")
 }
 
-// Test 24: spracuj transakciu, vytvor blok, potom spracuj blok na vrchu genesis bloku s transakciou n\'e1rokuj\'facou UTXO z tej transakcie\
 func TestBlockchain_processTransaction_CreateBlock_ProcessBlockOnTopOfTheGenesisBlockWithATransactionClaimingTheUTXOFromThatPreviousTransaction(t *testing.T) {
 	privateKeyBob, _ := rsa.GenerateKey(rand.Reader, 1024)
 	pubKeyBob := &privateKeyBob.PublicKey
@@ -1278,7 +1257,6 @@ func TestBlockchain_processTransaction_CreateBlock_ProcessBlockOnTopOfTheGenesis
 	assert.False(t, result, "Blockchain must reject Block B, because its trying to spend a UTXO that wa never created in its branch")
 }
 
-// Test 25: spracuj viacero blokov priamo nad genesis blokom, potom vytvor blok. Najstar\'9a\'ed blok v rovnakej v\'fd\'9ake ako maxHeightBlock by mal by\uc0\u357  maxHeightBlock.\
 func TestBlockchain_processMultipleBlocksDirectlyOnTopOfTheGenesiBlock_ThenCreateAnotherBlock_TheOldestBlockAtTheSameHeightAsTheCurrentMaxHeightBlockShouldBecomeTheMaxHeightBlock(t *testing.T) {
 	privateKeyBob, _ := rsa.GenerateKey(rand.Reader, 1024)
 	pubKeyBob := &privateKeyBob.PublicKey
@@ -1321,7 +1299,6 @@ func TestBlockchain_processMultipleBlocksDirectlyOnTopOfTheGenesiBlock_ThenCreat
 
 }
 
-// Test 26: vytvor viacer\'e9 vetvy pribli\'9ene rovnakej ve\uc0\u318 kosti, zabezpe\u269 , \'9ee nov\'e9 bloky s\'fa v\'9edy vytvoren\'e9 v spr\'e1vnej vetve\
 func TestBlockchain_createMultipleBranchesOfApproximatelyTheSameLength_AndEnsureThatNewBlocksAreAlwaysCreatedInTheCorrectBranch(t *testing.T) {
 	privateKeyBob, _ := rsa.GenerateKey(rand.Reader, 1024)
 	pubKeyBob := &privateKeyBob.PublicKey
@@ -1389,7 +1366,6 @@ func TestBlockchain_createMultipleBranchesOfApproximatelyTheSameLength_AndEnsure
 	assert.Equal(t, blockB2.GetHash(), blockB3.GetPrevBlockHash(), "Block D should be created on top of blockA, because it the older one")
 }
 
-// Test 27: podobn\'fd predch\'e1dzaj\'facemu, ale potom sa pok\'fas spracova\uc0\u357  bloky, ktor\'fdch rodi\u269 ia s\'fa vo v\'fd\'9ake < maxHeight - CUT_OFF_AGE\
 func TestBlockchain_similarToThePreviousTestButThenTryToProcessBlocksWhoseParentsAreAtHeight_MaxHeightMinusCUT_OFF_AGE(t *testing.T) {
 	privateKeyBob, _ := rsa.GenerateKey(rand.Reader, 1024)
 	pubKeyBob := &privateKeyBob.PublicKey
@@ -1475,4 +1451,232 @@ func TestBlockchain_similarToThePreviousTestButThenTryToProcessBlocksWhoseParent
 
 	result = BlockProcess(oldBlock)
 	assert.False(t, result, "Block should be rejected because its parent is too deep in history (CUT_OFF_AGE exceeded)")
+}
+
+func TestBlockchain_CreateMultisig(t *testing.T) {
+	privateKey1, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		log.Fatal(err)
+	}
+	pubKey1 := &privateKey1.PublicKey
+
+	privateKey2, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		log.Fatal(err)
+	}
+	pubKey2 := &privateKey2.PublicKey
+
+	privateKey3, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		log.Fatal(err)
+	}
+	pubKey3 := &privateKey3.PublicKey
+
+	genesisBlock := NewBlock(nil, pubKey2)
+	genesisBlock.Finalizee()
+
+	localBlockchain := NewBlockchain(genesisBlock)
+	HandleBlocks(localBlockchain)
+
+	block1 := NewBlock(genesisBlock.GetHash(), pubKey1)
+
+	tx1 := NewTransaction()
+	tx1.AddInput(genesisBlock.GetCoinbase().GetHash(), 0)
+	addresses := []*rsa.PublicKey{pubKey1, pubKey2, pubKey3}
+	multiSigOut := NewMultiSigOutput(3.0, addresses)
+	tx1.AddMultisigOutput(multiSigOut)
+	tx1.Finalize()
+
+	tx1.SignTx(privateKey2, 0)
+
+	block1.TransactionAdd(tx1)
+	block1.Finalizee()
+
+	result := BlockProcess(block1)
+
+	assert.True(t, result, "Block with multisig output transaction should be accepted")
+}
+
+func TestBlockchain_CreateTransactionUsingMultisigAndSignByOneUser(t *testing.T) {
+	privateKey1, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		log.Fatal(err)
+	}
+	pubKey1 := &privateKey1.PublicKey
+
+	privateKey2, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		log.Fatal(err)
+	}
+	pubKey2 := &privateKey2.PublicKey
+
+	privateKey3, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		log.Fatal(err)
+	}
+	pubKey3 := &privateKey3.PublicKey
+
+	genesisBlock := NewBlock(nil, pubKey2)
+	genesisBlock.Finalizee()
+
+	localBlockchain := NewBlockchain(genesisBlock)
+	HandleBlocks(localBlockchain)
+
+	block1 := NewBlock(genesisBlock.GetHash(), pubKey1)
+
+	tx1 := NewTransaction()
+	tx1.AddInput(genesisBlock.GetCoinbase().GetHash(), 0)
+	addresses := []*rsa.PublicKey{pubKey1, pubKey2, pubKey3}
+	multiSigOut := NewMultiSigOutput(3.0, addresses)
+	tx1.AddMultisigOutput(multiSigOut)
+	tx1.Finalize()
+
+	tx1.SignTx(privateKey2, 0)
+
+	block1.TransactionAdd(tx1)
+	block1.Finalizee()
+
+	result := BlockProcess(block1)
+
+	assert.True(t, result, "Block with multisig output transaction should be accepted")
+
+	tx2 := NewTransaction()
+	tx2.AddInput(tx1.GetHash(), 0)
+	tx2.AddOutput(1.0, pubKey1)
+	tx2.SignMultiSigTx(privateKey1, 0)
+	tx2.Finalize()
+
+	block2 := NewBlock(block1.GetHash(), pubKey2)
+	block2.TransactionAdd(tx2)
+	block2.Finalizee()
+	result = BlockProcess(block2)
+	assert.False(t, result, "Block with multisig transaction having only one signature should be rejected")
+}
+
+func TestBlockchain_CreateTransactionUsingMultisigAndSignByMinimumNumberOfUser(t *testing.T) {
+	privateKey1, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		log.Fatal(err)
+	}
+	pubKey1 := &privateKey1.PublicKey
+
+	privateKey2, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		log.Fatal(err)
+	}
+	pubKey2 := &privateKey2.PublicKey
+
+	privateKey3, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		log.Fatal(err)
+	}
+	pubKey3 := &privateKey3.PublicKey
+
+	genesisBlock := NewBlock(nil, pubKey2)
+	genesisBlock.Finalizee()
+
+	localBlockchain := NewBlockchain(genesisBlock)
+	HandleBlocks(localBlockchain)
+
+	block1 := NewBlock(genesisBlock.GetHash(), pubKey1)
+
+	tx1 := NewTransaction()
+	tx1.AddInput(genesisBlock.GetCoinbase().GetHash(), 0)
+	addresses := []*rsa.PublicKey{pubKey1, pubKey2, pubKey3}
+	multiSigOut := NewMultiSigOutput(3.0, addresses)
+	tx1.AddMultisigOutput(multiSigOut)
+	tx1.Finalize()
+
+	tx1.SignTx(privateKey2, 0)
+
+	block1.TransactionAdd(tx1)
+	block1.Finalizee()
+
+	result := BlockProcess(block1)
+
+	assert.True(t, result, "Block with multisig output transaction should be accepted")
+
+	tx2 := NewTransaction()
+	tx2.AddInput(tx1.GetHash(), 0)
+	tx2.AddOutput(2.0, pubKey1)
+	// Sign with Alice and Carol.
+	tx2.SignMultiSigTx(privateKey1, 0)
+	tx2.SignMultiSigTx(privateKey3, 0)
+	tx2.Finalize()
+
+	block2 := NewBlock(block1.GetHash(), pubKey2)
+	block2.TransactionAdd(tx2)
+	block2.Finalizee()
+	result = BlockProcess(block2)
+	assert.True(t, result, "Block with multisig transaction having two signatures should be accepted")
+}
+
+func TestBlockchain_FullMultiSigTransactions(t *testing.T) {
+	privateKey1, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		log.Fatal(err)
+	}
+	pubKey1 := &privateKey1.PublicKey
+
+	privateKey2, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		log.Fatal(err)
+	}
+	pubKey2 := &privateKey2.PublicKey
+
+	privateKey3, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		log.Fatal(err)
+	}
+	pubKey3 := &privateKey3.PublicKey
+
+	genesisBlock := NewBlock(nil, pubKey2)
+	genesisBlock.Finalizee()
+
+	localBlockchain := NewBlockchain(genesisBlock)
+	HandleBlocks(localBlockchain)
+
+	block1 := NewBlock(genesisBlock.GetHash(), pubKey1)
+
+	tx1 := NewTransaction()
+	tx1.AddInput(genesisBlock.GetCoinbase().GetHash(), 0)
+	addresses := []*rsa.PublicKey{pubKey1, pubKey2, pubKey3}
+	multiSigOut := NewMultiSigOutput(3.0, addresses)
+	tx1.AddMultisigOutput(multiSigOut)
+	tx1.Finalize()
+
+	tx1.SignTx(privateKey2, 0)
+
+	block1.TransactionAdd(tx1)
+	block1.Finalizee()
+
+	result := BlockProcess(block1)
+
+	assert.True(t, result, "Block with multisig output transaction should be accepted")
+
+	tx2 := NewTransaction()
+	tx2.AddInput(tx1.GetHash(), 0)
+	tx2.AddOutput(1.0, pubKey1)
+	tx2.SignMultiSigTx(privateKey1, 0)
+	tx2.Finalize()
+
+	block2 := NewBlock(block1.GetHash(), pubKey2)
+	block2.TransactionAdd(tx2)
+	block2.Finalizee()
+	result = BlockProcess(block2)
+	assert.False(t, result, "Block with multisig transaction having only one signature should be rejected")
+
+	tx3 := NewTransaction()
+	tx3.AddInput(tx1.GetHash(), 0)
+	tx3.AddOutput(2.0, pubKey1)
+	// Sign with Alice and Carol.
+	tx3.SignMultiSigTx(privateKey1, 0)
+	tx3.SignMultiSigTx(privateKey3, 0)
+	tx3.Finalize()
+
+	block3 := NewBlock(block1.GetHash(), pubKey2)
+	block3.TransactionAdd(tx3)
+	block3.Finalizee()
+	result = BlockProcess(block3)
+	assert.True(t, result, "Block with multisig transaction having two signatures should be accepted")
 }

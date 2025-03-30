@@ -4,6 +4,11 @@ import (
 	"crypto"
 	"crypto/rsa"
 	"crypto/sha256"
+	"encoding/hex"
+)
+
+const (
+	NEED_SIGN = 2
 )
 
 var (
@@ -57,11 +62,20 @@ func TxIsValid(tx Transaction, pool *UTXOPool) bool {
 		}
 		output := pool.GetTxOutput(*utxo)
 		data := tx.GetDataToSign(i)
-		signature := input.Signature
 
-		if !VerifySignature(data, signature, output.Address) {
-			return false
+		if output.MultiSigAddresses != nil && len(output.MultiSigAddresses) > 0 {
+			if len(input.MultiSigSignature) < NEED_SIGN {
+				return false
+			}
+			if !VerifyMultiSig(data, input.MultiSigSignature, output.MultiSigAddresses) {
+				return false
+			}
+		} else {
+			if !VerifySignature(data, input.Signature, output.Address) {
+				return false
+			}
 		}
+
 		if claimedUTXOs[utxo.Key()] {
 			return false
 		}
@@ -80,6 +94,30 @@ func TxIsValid(tx Transaction, pool *UTXOPool) bool {
 	}
 
 	return sumOfInputs >= sumOfOutputs
+}
+
+func VerifyMultiSig(data []byte, sigs [][]byte, addresses []*rsa.PublicKey) bool {
+	validCount := 0
+	usedKeys := make(map[string]bool)
+
+	for _, pubKey := range addresses {
+		keyId := hex.EncodeToString(pubKey.N.Bytes())
+		if usedKeys[keyId] {
+			continue
+		}
+
+		for _, sig := range sigs {
+			if VerifySignature(data, sig, pubKey) {
+				validCount++
+				usedKeys[keyId] = true
+				break
+			}
+		}
+		if validCount >= NEED_SIGN {
+			return true
+		}
+	}
+	return false
 }
 
 func VerifySignature(message []byte, signature []byte, address *rsa.PublicKey) bool {

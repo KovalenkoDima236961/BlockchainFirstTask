@@ -1,7 +1,5 @@
 package main
 
-// TODO: CREATE LIST FOR INPUTS AND OUTPUTS( FOR TRANSACTION IN SECTION ADD TRANSACTION)
-
 import (
 	"DMBLOCK_GO/third_faza"
 	"crypto/rand"
@@ -39,7 +37,7 @@ var (
 
 // ===================== STYLED BLOCKS / TREE VIEW =====================
 
-func styledBlockCard(height int, hash string, txCount int) fyne.CanvasObject {
+func styledBlockCard(height int, hash string, prevHash string, txCount int) fyne.CanvasObject {
 	// Background
 	bg := canvas.NewRectangle(color.NRGBA{R: 60, G: 60, B: 100, A: 255})
 	bg.SetMinSize(fyne.NewSize(200, 180))
@@ -52,6 +50,9 @@ func styledBlockCard(height int, hash string, txCount int) fyne.CanvasObject {
 	hashText := canvas.NewText(fmt.Sprintf("Hash: %.6s", hash), color.White)
 	hashText.Alignment = fyne.TextAlignCenter
 
+	prevHashText := canvas.NewText(fmt.Sprintf("Prev Hash: %.6s", prevHash), color.White)
+	prevHashText.Alignment = fyne.TextAlignCenter
+
 	txsText := canvas.NewText(fmt.Sprintf("%d txs", txCount), color.White)
 	txsText.Alignment = fyne.TextAlignCenter
 
@@ -59,6 +60,7 @@ func styledBlockCard(height int, hash string, txCount int) fyne.CanvasObject {
 		layout.NewSpacer(),
 		container.NewCenter(heightText),
 		container.NewCenter(hashText),
+		container.NewCenter(prevHashText),
 		container.NewCenter(txsText),
 		layout.NewSpacer(),
 	)
@@ -68,9 +70,8 @@ func styledBlockCard(height int, hash string, txCount int) fyne.CanvasObject {
 
 func buildTree(node *third_faza.BlockNode) *fyne.Container {
 	block := node.B
-	card := styledBlockCard(int(node.Height), fmt.Sprintf("%x", block.GetHash()), len(block.GetTransactions()))
+	card := styledBlockCard(int(node.Height), fmt.Sprintf("%x", block.GetHash()), fmt.Sprintf("%x", block.GetPrevBlockHash()), len(block.GetTransactions()))
 
-	// Build child containers recursively
 	childContainers := []fyne.CanvasObject{}
 	for _, child := range node.Children {
 		childContainers = append(childContainers, buildTree(child))

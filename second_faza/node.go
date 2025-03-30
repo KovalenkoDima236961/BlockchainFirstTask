@@ -2,7 +2,6 @@ package second_faza
 
 import (
 	"math/rand"
-	"time"
 )
 
 const (
@@ -94,7 +93,7 @@ func (node *TrustedNode) FollowesReceive(candidates [][]int) {
 		if len(data) < 2 {
 			continue
 		}
-		candidateList = append(candidateList, NewCandidate(NewTransaction(int(data[0])), int(data[1])))
+		candidateList = append(candidateList, NewCandidate(NewTransaction(data[0]), data[1]))
 	}
 
 	votesByTx := make(map[int][]int)
@@ -105,8 +104,6 @@ func (node *TrustedNode) FollowesReceive(candidates [][]int) {
 			votesByTx[txID] = append(votesByTx[txID], candidate.sender)
 		}
 	}
-
-	rand.Seed(time.Now().UnixNano())
 
 	for txId, votes := range votesByTx {
 		sampleVotes := votes
@@ -129,10 +126,7 @@ func (node *TrustedNode) FollowesReceive(candidates [][]int) {
 				status.status = Valid
 				status.confidence = 1
 			}
-		} else {
-			status.status = Invalid
 		}
-
 		node.txPool[txId] = status
 	}
 
